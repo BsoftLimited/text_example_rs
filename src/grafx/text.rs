@@ -1,3 +1,5 @@
+use crate::Disposable;
+use crate::grafx::physics::Rectangle;
 use crate::grafx::physics::Transformation2D;
 use crate::grafx::physics::Viewport;
 use gl::types::GLsizei;
@@ -13,8 +15,12 @@ use crate::grafx::utils::Character;
 static mut TEXT_SHADER:Option<Box<Shader>> = None;
 
 pub struct Text{
-    voa:u32, vbo:u32, text:String, font:String, font_size:u32, characters:Vec<Character>, 
+    voa:u32, vbo:u32, text:String, font:String, font_size:u32, characters:Box<Vec<Character>>, 
     color:Box<Color>, transform:Box<Transformation2D>
+}
+
+pub trait Collidable<T>{
+    fn get_boundary(&self)->T;
 }
 
 #[allow(dead_code)]
@@ -54,7 +60,7 @@ impl Text{
         }
     }
 
-    fn get_characters(font:&str, text:&str, size:u32)->Vec<Character>{
+    fn get_characters(font:&str, text:&str, size:u32)->Box<Vec<Character>>{
         let mut characters = Vec::new();
         let lib = Library::init().unwrap();
         let face = lib.new_face(font, 0).unwrap();
@@ -72,7 +78,7 @@ impl Text{
                 gl::GenTextures(1,&mut texture);
                 gl::BindTexture(gl::TEXTURE_2D, texture);
                 
-                // set texture optionszzz
+                // set texture options
                 gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
                 gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
                 gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
@@ -84,16 +90,18 @@ impl Text{
         unsafe{ gl::BindTexture(gl::TEXTURE_2D, 0); }
         drop(lib);
         drop(face);
-        return characters;
+        return Box::new(characters);
     }
 
     pub fn set_text(&mut self, data:&str){
         self.text = String::from(data);
+        self.dispose();
         self.characters = Text::get_characters(&self.font, &self.text, self.font_size);
     }
     
     pub fn set_font_size(&mut self, size:u32){
         self.font_size = size;
+        self.dispose();
         self.characters = Text::get_characters(&self.font, &self.text, self.font_size);
     }
     
@@ -105,14 +113,14 @@ impl Text{
     pub fn get_font_size(&self)->u32{ return self.font_size; }
     pub fn get_width(&self)->f32{
         let mut width:f32 = 0.0;
-        for ch in &self.characters{
+        for ch in self.characters.as_ref(){
             width += (ch.get_advance().x >> 6) as f32;
         }
         return width;
     }
 
     pub fn get_height(&self)->f32{
-        for ch in &self.characters{
+        for ch in self.characters.as_ref(){
             return ch.get_size().get_height() as f32;
         }
         return 0.0;
@@ -136,7 +144,7 @@ impl Text{
 
         let mut x = - self.get_width()/2.0;
         let y = -  self.get_height() /2.0;
-        for ch in &self.characters{
+        for ch in self.characters.as_ref(){
             let xpos = x + ch.get_bearing().0 as f32;
             let ypos = y - (ch.get_size().get_height() - ch.get_bearing().1) as f32;
             let width = ch.get_size().get_width() as f32;
@@ -165,6 +173,29 @@ impl Text{
         unsafe{
             gl::BindVertexArray(0);
             gl::BindTexture(gl::TEXTURE_2D, 0);
+        }
+    }
+}
+
+impl Collidable<Rectangle> for Text{
+    fn get_boundary(&self) -> Rectangle {
+        Rectangle::new(
+            self.transform.get_position().getX(), self.transform.get_position().getY(),
+            self.get_width(), self.get_height(), self.transform.get_rotation())
+    }
+}
+
+impl Disposable for Text{
+    fn dispose(&mut self) {
+        if !self.characters.is_empty(){
+            let ch = self.characters[0].get_texture();
+            unsafe{
+                gl::BindVertexArray(self.voa);
+                gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+                gl::DeleteTextures(1, &ch);
+                gl::BindVertexArray(0);
+            }
+            self.characters.clear();
         }
     }
 }

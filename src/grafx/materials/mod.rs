@@ -58,7 +58,7 @@ impl Material for BasicMaterial {
 }
 
 impl Disposable for BasicMaterial{
-    fn dispose(&self) {
+    fn dispose(&mut self) {
         unsafe { self.get_shader().dispose(); }
     }
 }

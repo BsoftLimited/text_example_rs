@@ -22,7 +22,7 @@ use glutin::{ContextBuilder};
 
 #[allow(dead_code)]
 #[allow(non_snake_case)]
-pub trait Disposable{ fn dispose(&self); }
+pub trait Disposable{ fn dispose(&mut self); }
 
 #[allow(dead_code)]
 #[allow(non_snake_case)]
