@@ -10,7 +10,7 @@ pub struct MaterialProperty{ diffuse:Box<Color>, ambient:Box<Color>, specular:Bo
 impl MaterialProperty{
     pub fn new()->Self{
         MaterialProperty{
-            diffuse:Box::new(Color::White()), ambient:Box::new(Color::White()), specular:Box::new(Color::White()), shinines:127.0
+            diffuse:Box::new(Color::white()), ambient:Box::new(Color::white()), specular:Box::new(Color::white()), shinines:127.0
         }
     }
     pub fn get_diffuse_color(&self)->&Box<Color>{ &self.diffuse }

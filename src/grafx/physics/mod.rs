@@ -7,11 +7,11 @@ pub use matrix::{Matrix, Matrix2, Matrix3, Matrix4, Transformation2D, Transforma
 pub struct Viewport{ data:Box<Matrix4> , width:f32, height:f32 }
 impl Viewport{
     pub fn new(width:f32, height:f32)->Self{
-        Viewport{ width, height,  data:Box::new(Matrix4::OrthogonalMatrix(height, 0.0, 0.0, width)), }
+        Viewport{ width, height,  data:Box::new(Matrix4::orthogonal_matrix(height, 0.0, 0.0, width)), }
     }
 
     pub fn update(&mut self, width:f32, height:f32){
-        self.data = Box::new(Matrix4::OrthogonalMatrix(height, 0.0, 0.0, width));
+        self.data = Box::new(Matrix4::orthogonal_matrix(height, 0.0, 0.0, width));
     }
 
     pub fn get_data(&self)->&[[f32; 4]; 4]{ self.data.getData() }
@@ -71,14 +71,14 @@ impl Rectangle{
     fn generate_scalar(corner: &Vector2, axis:&Vector2)->i32{
         //Using the formula for Vector projection. Take the corner being passed in
         //and project it onto the given Axis
-        let a_numerator = (corner.getX() * axis.getX()) + (corner.getY() * axis.getY());
-        let a_denominator = axis.getX().powi(2) + axis.getY().powi(2);
+        let a_numerator = (corner.get_x() * axis.get_x()) + (corner.get_y() * axis.get_y());
+        let a_denominator = axis.get_x().powi(2) + axis.get_y().powi(2);
         let a_division_result = a_numerator / a_denominator;
-        let a_corner_projected = Vector2::new(a_division_result * axis.getX(), a_division_result * axis.getY());
+        let a_corner_projected = Vector2::new(a_division_result * axis.get_x(), a_division_result * axis.get_y());
 
         //Now that we have our projected Vector, calculate a scalar of that projection
         //that can be used to more easily do comparisons
-        let a_scalar = (axis.getX() * a_corner_projected.getX()) + (axis.getY() * a_corner_projected.getY());
+        let a_scalar = (axis.get_x() * a_corner_projected.get_x()) + (axis.get_y() * a_corner_projected.get_y());
         return a_scalar as i32;
     }
 

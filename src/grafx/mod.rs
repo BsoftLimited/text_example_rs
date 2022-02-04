@@ -14,6 +14,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 static mut DELTA_TIME: f64 = 0.0;
 static mut LAST_TIME:f64 = 0.0;
+pub static mut FPS:u32 = 0;
+static mut FPS_COUNTER:f64 = 0.0;
+static mut FPS_TRACKER:u32 = 0;
 
 use glutin::event::{Event, WindowEvent};
 use glutin::event_loop::{ ControlFlow, EventLoop};
@@ -58,9 +61,9 @@ pub fn init(detail:&WindowDetails)->(EventLoop<()>, WindowedContext<PossiblyCurr
     unsafe {
         LAST_TIME = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs_f64();
         //gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
-        //gl::FrontFace(gl::CW);
-        //gl::CullFace(gl::BACK);
-        //gl::Enable(gl::CULL_FACE);
+        gl::FrontFace(gl::CW);
+        gl::CullFace(gl::BACK);
+        gl::Enable(gl::CULL_FACE);
         gl::Enable(gl::DEPTH_TEST);
     }
 
@@ -100,6 +103,14 @@ pub fn start(win_context: (EventLoop<()>, WindowedContext<PossiblyCurrent>), mut
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             game.render();
             game.update(DELTA_TIME as f32);
+            FPS_COUNTER += DELTA_TIME;
+            if FPS_COUNTER >= 1.0{
+                FPS_COUNTER -= 1.0;
+                FPS = FPS_TRACKER;
+                FPS_TRACKER = 0;
+            }else{
+                FPS_TRACKER += 1;
+            }
         }
         context.swap_buffers().unwrap();
     });

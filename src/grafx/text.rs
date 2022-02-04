@@ -10,7 +10,7 @@ use std::ffi::c_void;
 use std::{ mem, ptr};
 use freetype::face::LoadFlag;
 use freetype::Library;
-use crate::grafx::utils::Character;
+use crate::grafx::utils::{ Character, CharacterType };
 
 static mut TEXT_SHADER:Option<Box<Shader>> = None;
 
@@ -55,7 +55,7 @@ impl Text{
 
         Text{
             voa, vbo, text:String::from(text), font:String::from(font),
-            font_size:16, characters, color:Box::new(Color::White()),
+            font_size:16, characters, color:Box::new(Color::white()),
             transform:Box::new(Transformation2D::new())
         }
     }
@@ -69,22 +69,22 @@ impl Text{
         unsafe{ gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1); }
         for i in 0..text.len(){
             let ch = text.chars().nth(i).unwrap();
-            face.load_char(ch as usize, LoadFlag::RENDER).unwrap();
-            // Get the glyph instance
-            let glyph = face.glyph();
-
-            unsafe{
-                let mut texture = 0;
-                gl::GenTextures(1,&mut texture);
-                gl::BindTexture(gl::TEXTURE_2D, texture);
-                
-                // set texture options
-                gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
-                gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
-                gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-                gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-                gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RED.try_into().unwrap(), glyph.bitmap().width(), glyph.bitmap().rows(), 0,  gl::RED, gl::UNSIGNED_BYTE, glyph.bitmap().raw().buffer as *const c_void);
-                characters.push(Character::new(texture, glyph.bitmap().width(), glyph.bitmap().rows(), glyph.bitmap_left(), glyph.bitmap_top(), glyph.advance()));
+            if ch.is_control(){
+                characters.push(Character::control(ch));
+            }else{
+                face.load_char(ch as usize, LoadFlag::RENDER).unwrap();
+                let glyph = face.glyph();
+                unsafe{
+                    let mut texture = 0;
+                    gl::GenTextures(1,&mut texture);
+                    gl::BindTexture(gl::TEXTURE_2D, texture);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+                    gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RED.try_into().unwrap(), glyph.bitmap().width(), glyph.bitmap().rows(), 0,  gl::RED, gl::UNSIGNED_BYTE, glyph.bitmap().raw().buffer as *const c_void);
+                    characters.push(Character::new(ch, texture, glyph.bitmap().width(), glyph.bitmap().rows(), glyph.bitmap_left(), glyph.bitmap_top(), glyph.advance()));
+                }
             }
         }
         unsafe{ gl::BindTexture(gl::TEXTURE_2D, 0); }
@@ -94,9 +94,11 @@ impl Text{
     }
 
     pub fn set_text(&mut self, data:&str){
-        self.text = String::from(data);
-        self.dispose();
-        self.characters = Text::get_characters(&self.font, &self.text, self.font_size);
+        if !self.text.eq(data){
+            self.text = String::from(data);
+            self.dispose();
+            self.characters = Text::get_characters(&self.font, &self.text, self.font_size);
+        }
     }
     
     pub fn set_font_size(&mut self, size:u32){
@@ -113,17 +115,34 @@ impl Text{
     pub fn get_font_size(&self)->u32{ return self.font_size; }
     pub fn get_width(&self)->f32{
         let mut width:f32 = 0.0;
+        let mut init:f32 = 0.0;
         for ch in self.characters.as_ref(){
-            width += (ch.get_advance().x >> 6) as f32;
+            if let CharacterType::Control = ch.get_type(){
+                if ch.get_character() == '\n'{
+                    width = if init > width { init } else { width };
+                    init = 0.0;
+                }
+            }else{
+                init += (ch.get_advance().x >> 6) as f32;
+            }
         }
-        return width;
+        return if init > width { init } else { width };
     }
 
     pub fn get_height(&self)->f32{
+        let mut height:f32 = 0.0;
+        let mut init:f32 = 0.0;
         for ch in self.characters.as_ref(){
-            return ch.get_size().get_height() as f32;
+            if let CharacterType::Control = ch.get_type(){
+                if ch.get_character() == '\n'{
+                    height += init;
+                    init = 0.0;
+                }
+            }else{
+                init = if init > ch.get_size().get_height() as f32 { init } else { ch.get_size().get_height() as f32 };
+            }
         }
-        return 0.0;
+        return height + init;
     }
 
     pub fn get_transform(&mut self)->&mut Transformation2D{
@@ -134,29 +153,32 @@ impl Text{
         unsafe{
             gl::BindVertexArray(self.voa);
             gl::ActiveTexture(gl::TEXTURE0);
-            if let Some(shader) = &TEXT_SHADER {
+            
                 shader.bind();
                 shader.set_uniform_matrix4("projection", port.get_data());
-                shader.set_uniform_matrix3("transform", self.transform.getTransformMatrix());
+                shader.set_uniform_matrix3("transform", self.transform.get_transform_matrix());
                 shader.set_uniform_color("textColor", &self.color);
             }
         }
 
         let mut x = - self.get_width()/2.0;
-        let y = -  self.get_height() /2.0;
+        let mut y = - self.get_height() /2.0;
         for ch in self.characters.as_ref(){
+            if let CharacterType::Control = ch.get_type(){
+            }
+
             let xpos = x + ch.get_bearing().0 as f32;
             let ypos = y - (ch.get_size().get_height() - ch.get_bearing().1) as f32;
             let width = ch.get_size().get_width() as f32;
             let height = ch.get_size().get_height() as f32;
 
-            let vertices = [
-                [ xpos,         ypos + height,    0.0, 0.0 ],            
+            let vertices = [           
+                [ xpos + width, ypos,             1.0, 1.0 ],
                 [ xpos,         ypos,             0.0, 1.0 ],
-                [ xpos + width, ypos,             1.0, 1.0 ],
+                [ xpos,         ypos + height,    0.0, 0.0 ], 
 
-                [ xpos,         ypos + height,    0.0, 0.0 ],
                 [ xpos + width, ypos,             1.0, 1.0 ],
+                [ xpos,         ypos + height,    0.0, 0.0 ],
                 [ xpos + width, ypos + height,    1.0, 0.0 ]           
             ];
 
@@ -169,6 +191,7 @@ impl Text{
             }
 
             x += (ch.get_advance().x >> 6) as f32;
+            //y += (ch.get_advance().y >> 6) as f32;
         }
         unsafe{
             gl::BindVertexArray(0);
@@ -180,7 +203,7 @@ impl Text{
 impl Collidable<Rectangle> for Text{
     fn get_boundary(&self) -> Rectangle {
         Rectangle::new(
-            self.transform.get_position().getX(), self.transform.get_position().getY(),
+            self.transform.get_position().get_x(), self.transform.get_position().get_y(),
             self.get_width(), self.get_height(), self.transform.get_rotation())
     }
 }

@@ -7,7 +7,6 @@ use std::fs;
 
 pub struct Shader{ shader_program: u32}
 
-#[allow(dead_code)]
 impl Shader{
     unsafe fn new(vertex: &str, fragment: &str) -> Self{
         let vertex_data = fs::read_to_string(vertex).expect(format!("vertex shader at path {} not found", vertex).as_ref());
@@ -43,7 +42,6 @@ impl Shader{
                 Ok(value) => { println!("ERROR::SHADER::COMPILATION_FAILED\n{}\n{}", value, shader_source); },
                 Err(error) => { println!("ERROR::SHADER::COMPILATION_FAILED\n{}\n{}", error, shader_source);}
             }
-            
         }
         shader
     }
@@ -92,7 +90,7 @@ impl Shader{
         let c_name = CString::new(name).unwrap();
         let ptr = c_name.as_ptr();
         let uniform = gl::GetUniformLocation(self.shader_program, ptr);
-        gl::ProgramUniform3f(self.shader_program, uniform, vector.getX(), vector.getY(), vector.getZ());
+        gl::ProgramUniform3f(self.shader_program, uniform, vector.get_x(), vector.get_y(), vector.get_z());
     }
 
     pub unsafe fn set_uniform_color(&self, name:&str, color:&Color){

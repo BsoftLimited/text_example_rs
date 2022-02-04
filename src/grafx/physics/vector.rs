@@ -1,53 +1,50 @@
 use std::ops::{Mul, Sub, Add};
 
-#[allow(non_snake_case)]
 pub struct Color{ pub red:f32, pub green:f32, pub blue:f32, pub alpha:f32}
 
 #[allow(dead_code)]
-#[allow(non_snake_case)]
 impl Color{
     pub fn new(red:f32, green:f32, blue:f32, alpha:f32)->Self{
         Color{red, green, blue, alpha}
     }
 
-    pub fn White()->Self{
+    pub fn white()->Self{
         Color{red:1.0, green:1.0, blue:1.0, alpha:1.0,}
     }
-    pub fn Black()->Self{
+    pub fn black()->Self{
         Color{red:0.0, green:0.0, blue:0.0, alpha:1.0,}
     }
-    pub fn Red()->Self{
+    pub fn red()->Self{
         Color{red:1.0, green:0.0, blue:0.0, alpha:1.0,}
     }
-    pub fn Blue()->Self{
+    pub fn blue()->Self{
         Color{red:0.0, green:0.0, blue:1.0, alpha:1.0,}
     }
-    pub fn Green()->Self{
+    pub fn green()->Self{
         Color{red:1.0, green:1.0, blue:1.0, alpha:1.0,}
     }
 }
 
-#[allow(non_snake_case)]
+
 pub struct Vector2{ data:[f32; 2]}
 
-#[allow(non_snake_case)]
 impl Vector2{
     pub fn new(x:f32, y:f32)->Self{ Vector2{ data:[x, y] } }
     pub fn zero()->Self{ Vector2{ data:[0.0, 0.0]} }
-    pub fn getX(&self)->f32{ self.data[0] }
-    pub fn getY(&self)->f32{ self.data[1] }
+    pub fn get_x(&self)->f32{ self.data[0] }
+    pub fn get_y(&self)->f32{ self.data[1] }
 
-    pub fn setX(&mut self, value:f32){ self.data[0] = value; }
-    pub fn setY(&mut self, value:f32){ self.data[1] = value; }
+    pub fn set_x(&mut self, value:f32){ self.data[0] = value; }
+    pub fn set_y(&mut self, value:f32){ self.data[1] = value; }
     pub fn set(&mut self, x:f32, y:f32){
         self.data[0] = x;
         self.data[1] = y;
     }
 
-    pub fn add(&mut self, x:f32, y:f32){ self.set(x + self.getX(), y + self.getY()); }
+    pub fn add(&mut self, x:f32, y:f32){ self.set(x + self.get_x(), y + self.get_y()); }
 
     pub fn sub(&mut self, x:f32, y:f32){
-        self.set(self.getX() - x, self.getY() - y);
+        self.set(self.get_x() - x, self.get_y() - y);
     }
 
     pub fn length(&self)->f32{
@@ -68,8 +65,8 @@ impl Vector2{
 impl Mul for &Vector2{
     type Output = Vector2;
     fn mul(self, rhs: Self) -> Self::Output {
-        let x = self.getY() - rhs.getY();
-        let y = self.getX() - rhs.getX();
+        let x = self.data[1] - rhs.data[1];
+        let y = self.data[0] - rhs.data[0];
         return Vector2{ data:[x, -y]};
     }
 }
@@ -95,23 +92,22 @@ impl Sub for &Vector2{
     }
 }
 
-#[allow(non_snake_case)]
 pub struct Vector3{ data:[f32; 3]}
 
-#[allow(non_snake_case)]
+
 impl Vector3{
     pub fn new(x:f32, y:f32, z:f32)->Self{ Vector3{data:[x, y, z]} }
     pub fn zero()->Self{ Vector3{ data:[0.0, 0.0, 0.0]} }
     pub fn up()->Self{ Vector3{ data:[0.0, 1.0, 0.0]} }
     pub fn one()->Self{ Vector3{ data:[1.0, 1.0, 1.0]} }
 
-    pub fn getX(&self)->f32{ self.data[0] }
-    pub fn getY(&self)->f32{ self.data[1] }
-    pub fn getZ(&self)->f32{ self.data[2] }
+    pub fn get_x(&self)->f32{ self.data[0] }
+    pub fn get_y(&self)->f32{ self.data[1] }
+    pub fn get_z(&self)->f32{ self.data[2] }
 
-    pub fn setX(&mut self, value:f32){ self.data[0] = value; }
-    pub fn setY(&mut self, value:f32){ self.data[1] = value; }
-    pub fn setZ(&mut self, value:f32){ self.data[2] = value;}
+    pub fn set_x(&mut self, value:f32){ self.data[0] = value; }
+    pub fn set_y(&mut self, value:f32){ self.data[1] = value; }
+    pub fn set_z(&mut self, value:f32){ self.data[2] = value;}
     pub fn set(&mut self, x:f32, y:f32, z:f32){
         self.data[0] = x;
         self.data[1] = y;
@@ -119,11 +115,11 @@ impl Vector3{
     }
 
     pub fn add(&mut self, x:f32, y:f32, z:f32){
-        self.set(x + self.getX(), y + self.getY(), z + self.getZ());
+        self.set(x + self.get_x(), y + self.get_y(), z + self.get_z());
     }
 
     pub fn sub(&mut self, x:f32, y:f32, z:f32){
-        self.set(self.getX() - x, self.getY() - y, self.getZ() - z);
+        self.set(self.get_x() - x, self.get_y() - y, self.get_z() - z);
     }
 
     pub fn length(&self)->f32{
@@ -145,9 +141,9 @@ impl Vector3{
 impl Mul for &Vector3{
     type Output = Vector3;
     fn mul(self, rhs: Self) -> Self::Output {
-        let x = (self.getY() * rhs.getZ()) - (self.getZ() * rhs.getY());
-        let y = (self.getX() * rhs.getZ()) - (self.getZ() * rhs.getX());
-        let z = (self.getX() * rhs.getY()) - (self.getY() * rhs.getX());
+        let x = (self.get_y() * rhs.get_z()) - (self.get_z() * rhs.get_y());
+        let y = (self.get_x() * rhs.get_z()) - (self.get_z() * rhs.get_x());
+        let z = (self.get_x() * rhs.get_y()) - (self.get_y() * rhs.get_x());
         return Vector3{ data:[x, -y, z]};
     }
 }
